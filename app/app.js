@@ -227,7 +227,10 @@ function createItemEl(columnEl, column, item, index) {
     const deleteBtn = document.createElement('button');
     deleteBtn.classList.add('action-btn', 'delete-btn');
     deleteBtn.innerHTML = '×';
-    deleteBtn.onclick = () => confirmDelete(index, column);
+    deleteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation(); // Prevent event bubbling
+        await confirmDelete(index, column);
+    });
     normalButtons.appendChild(deleteBtn);
 
     // Edit Buttons
@@ -373,14 +376,40 @@ function toggleCollapse(card) {
 }
 
 // Confirm and delete card
-function confirmDelete(id, column) {
+async function confirmDelete(id, column) {
     const selectedArray = listArrays[column];
+    if (!selectedArray) {
+        console.error('Invalid column:', column);
+        return;
+    }
+
+    // Find the item by ID
     const item = selectedArray[id];
-    
-    if (confirm(`Delete "${item.title}"?`)) {
-        selectedArray.splice(id, 1);
-        updateSavedColumns();
-        updateDOM();
+    if (!item) {
+        console.error('Item not found:', id);
+        return;
+    }
+
+    if (confirm(`Delete "${item.title || 'Untitled'}"?`)) {
+        try {
+            // Remove the item
+            selectedArray.splice(id, 1);
+            
+            // Remove any empty slots
+            for (let i = 0; i < listArrays.length; i++) {
+                listArrays[i] = listArrays[i].filter(item => item !== null && item !== undefined);
+            }
+            
+            await updateSavedColumns();
+            updateDOM();
+            console.log('Successfully deleted item:', id, 'from column:', column);
+        } catch (error) {
+            console.error('Failed to delete card:', error);
+            alert('Failed to delete card. Please try again.');
+            // Restore the item
+            selectedArray.splice(id, 0, item);
+            updateDOM();
+        }
     }
 }
 
@@ -586,11 +615,13 @@ function findColumnForCard(card) {
 window.showInputBox = showInputBox;
 window.hideInputBox = hideInputBox;
 window.addToColumn = addToColumn;
-window.updateItem = updateItem;
 window.drag = drag;
 window.allowDrop = allowDrop;
 window.drop = drop;
-window.updateProjectName = updateProjectName;
+window.toggleCollapse = toggleCollapse;
+window.confirmDelete = confirmDelete;
+window.saveContent = saveContent;
+window.cancelEdit = cancelEdit;
 
 // Initialize on page load
 initialize();
