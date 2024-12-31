@@ -3,12 +3,16 @@ const saveItemBtns = document.querySelectorAll(".solid");
 const addItemContainers = document.querySelectorAll(".add-container");
 const addItems = document.querySelectorAll(".add-item");
 
-// Item Lists
-const listColumns = document.querySelectorAll(".drag-item-list");
-const backlogListEl = document.getElementById("to-do-list");
-const progressListEl = document.getElementById("doing-list");
-const completeListEl = document.getElementById("done-list");
-const onHoldListEl = document.getElementById("on-hold-list");
+// Kanban Board Elements
+const backlogListEl = document.querySelector(".to-do-column .drag-item-list");
+const progressListEl = document.querySelector(".doing-column .drag-item-list");
+const completeListEl = document.querySelector(".done-column .drag-item-list");
+const onHoldListEl = document.querySelector(".on-hold-column .drag-item-list");
+
+const backlogList = document.getElementById("backlog-list");
+const progressList = document.getElementById("progress-list");
+const completeList = document.getElementById("complete-list");
+const onHoldList = document.getElementById("on-hold-list");
 
 // Items
 let projectName = 'My Kanban Board';
@@ -19,7 +23,8 @@ let backlogListArray = [];
 let progressListArray = [];
 let completeListArray = [];
 let onHoldListArray = [];
-let listArrays = [];
+let listArrays = [backlogListArray, progressListArray, completeListArray, onHoldListArray];
+let listColumns = [backlogListEl, progressListEl, completeListEl, onHoldListEl];
 
 // Drag Functionality
 let draggedItem;
@@ -74,21 +79,23 @@ async function updateSavedColumns() {
 function updateDOM() {
     // Update project title
     const titleEl = document.querySelector('.main-title');
-    titleEl.textContent = projectName;
-    titleEl.contentEditable = true;
-    titleEl.addEventListener('focusout', updateProjectName);
+    if (titleEl) {
+        titleEl.textContent = projectName;
+        titleEl.contentEditable = true;
+        titleEl.addEventListener('focusout', updateProjectName);
+    }
     
-    // First, clear current cards
-    backlogListEl.textContent = "";
-    progressListEl.textContent = "";
-    completeListEl.textContent = "";
-    onHoldListEl.textContent = "";
+    // Check if list elements exist before updating
+    if (backlogListEl) backlogListEl.textContent = "";
+    if (progressListEl) progressListEl.textContent = "";
+    if (completeListEl) completeListEl.textContent = "";
+    if (onHoldListEl) onHoldListEl.textContent = "";
     
     // Create Cards
-    backlogListArray.forEach((item, index) => createItemEl(backlogListEl, 0, item, index));
-    progressListArray.forEach((item, index) => createItemEl(progressListEl, 1, item, index));
-    completeListArray.forEach((item, index) => createItemEl(completeListEl, 2, item, index));
-    onHoldListArray.forEach((item, index) => createItemEl(onHoldListEl, 3, item, index));
+    if (backlogListEl) backlogListArray.forEach((item, index) => createItemEl(backlogListEl, 0, item, index));
+    if (progressListEl) progressListArray.forEach((item, index) => createItemEl(progressListEl, 1, item, index));
+    if (completeListEl) completeListArray.forEach((item, index) => createItemEl(completeListEl, 2, item, index));
+    if (onHoldListEl) onHoldListArray.forEach((item, index) => createItemEl(onHoldListEl, 3, item, index));
     
     // Run getSavedColumns only if localStorage is empty
     if (!localStorage.getItem('kanbanData')) {
@@ -107,6 +114,12 @@ async function updateProjectName(e) {
     }
 }
 
+// Configure marked to preserve line breaks
+marked.use({
+    breaks: true,
+    gfm: true
+});
+
 // Create DOM Elements for each list item
 function createItemEl(columnEl, column, item, index) {
     const listEl = document.createElement("li");
@@ -122,7 +135,7 @@ function createItemEl(columnEl, column, item, index) {
     // Add drag icon
     const dragIcon = document.createElement("span");
     dragIcon.classList.add("drag-icon");
-    dragIcon.innerHTML = "⋮⋮"; // Simple drag handle icon using text
+    dragIcon.innerHTML = "⋮⋮";
     header.appendChild(dragIcon);
     
     // Add title
@@ -137,48 +150,162 @@ function createItemEl(columnEl, column, item, index) {
     const actions = document.createElement("div");
     actions.classList.add("drag-item-actions");
     
+    // Create normal buttons (collapse and delete)
+    const normalButtons = document.createElement("div");
+    normalButtons.classList.add("normal-buttons");
+    
     // Add collapse button
     const collapseBtn = document.createElement("button");
     collapseBtn.classList.add("action-btn", "collapse-btn");
     collapseBtn.innerHTML = item.collapsed ? "▶" : "▼";
     if (item.collapsed) collapseBtn.classList.add("collapsed");
     collapseBtn.onclick = () => toggleCollapse(listEl);
-    actions.appendChild(collapseBtn);
+    normalButtons.appendChild(collapseBtn);
     
     // Add delete button
     const deleteBtn = document.createElement("button");
     deleteBtn.classList.add("action-btn", "delete-btn");
     deleteBtn.innerHTML = "×";
     deleteBtn.onclick = () => confirmDelete(index, column);
-    actions.appendChild(deleteBtn);
+    normalButtons.appendChild(deleteBtn);
     
+    // Create edit buttons (save and cancel)
+    const editButtons = document.createElement("div");
+    editButtons.classList.add("edit-buttons");
+    editButtons.style.display = 'none';
+    
+    // Add save button
+    const saveBtn = document.createElement("button");
+    saveBtn.classList.add("action-btn", "save-btn");
+    saveBtn.innerHTML = "✓";
+    saveBtn.onclick = () => saveContent(listEl, index, column);
+    editButtons.appendChild(saveBtn);
+    
+    // Add cancel button
+    const cancelBtn = document.createElement("button");
+    cancelBtn.classList.add("action-btn", "cancel-btn");
+    cancelBtn.innerHTML = "↺";
+    cancelBtn.onclick = () => cancelEdit(listEl, item);
+    editButtons.appendChild(cancelBtn);
+    
+    // Add both button sets to actions
+    actions.appendChild(normalButtons);
+    actions.appendChild(editButtons);
     header.appendChild(actions);
     
-    // Add content container
-    const content = document.createElement("div");
-    content.classList.add("drag-item-content");
-    content.contentEditable = true;
-    content.textContent = item.content || '';
-    content.setAttribute("onfocusout", `updateItem(${index}, ${column})`);
-    if (item.collapsed) content.style.display = 'none';
+    // Create content wrapper for edit/display modes
+    const contentWrapper = document.createElement("div");
+    contentWrapper.classList.add("drag-item-content-wrapper");
+    
+    // Add content for editing
+    const contentEdit = document.createElement("div");
+    contentEdit.classList.add("drag-item-content", "content-edit");
+    contentEdit.contentEditable = true;
+    contentEdit.textContent = item.content || '';
+    contentEdit.style.display = 'none';
+    
+    // Store original content for cancel functionality
+    contentEdit.dataset.originalContent = item.content || '';
+    
+    // Add content for display (with markdown)
+    const contentDisplay = document.createElement("div");
+    contentDisplay.classList.add("drag-item-content", "content-display");
+    contentDisplay.innerHTML = marked.parse(item.content || '');
+    
+    // Add click handler to switch between edit and display modes
+    contentDisplay.addEventListener('click', () => {
+        contentDisplay.style.display = 'none';
+        contentEdit.style.display = 'block';
+        contentEdit.focus();
+        
+        // Show edit buttons, hide normal buttons
+        normalButtons.style.display = 'none';
+        editButtons.style.display = 'flex';
+    });
+    
+    contentWrapper.appendChild(contentEdit);
+    contentWrapper.appendChild(contentDisplay);
+    
+    if (item.collapsed) {
+        contentWrapper.style.display = 'none';
+    }
     
     // Assemble the card
     listEl.appendChild(header);
-    listEl.appendChild(content);
+    listEl.appendChild(contentWrapper);
     
     // Append to column
     columnEl.appendChild(listEl);
 }
 
+// Save content changes
+async function saveContent(listEl, index, column) {
+    const contentEdit = listEl.querySelector('.content-edit');
+    const contentDisplay = listEl.querySelector('.content-display');
+    const normalButtons = listEl.querySelector('.normal-buttons');
+    const editButtons = listEl.querySelector('.edit-buttons');
+    const title = listEl.querySelector('.drag-item-title');
+    
+    // Update display content
+    contentDisplay.innerHTML = marked.parse(contentEdit.textContent || '');
+    contentDisplay.style.display = 'block';
+    contentEdit.style.display = 'none';
+    
+    // Show normal buttons, hide edit buttons
+    normalButtons.style.display = 'flex';
+    editButtons.style.display = 'none';
+    
+    // Update the array data
+    const selectedArray = listArrays[column];
+    if (selectedArray) {
+        selectedArray[index] = {
+            ...selectedArray[index],
+            title: title.textContent || '',
+            content: contentEdit.textContent || '',
+            collapsed: listEl.querySelector('.drag-item-content-wrapper').style.display === 'none'
+        };
+        
+        // Save to server
+        try {
+            await updateSavedColumns();
+            // Update the original content after successful save
+            contentEdit.dataset.originalContent = contentEdit.textContent || '';
+        } catch (error) {
+            console.error('Failed to save changes:', error);
+            // Show error message to user
+            alert('Failed to save changes. Please try again.');
+            // Revert changes
+            cancelEdit(listEl, selectedArray[index]);
+        }
+    }
+}
+
+// Cancel content edit
+function cancelEdit(listEl, item) {
+    const contentEdit = listEl.querySelector('.content-edit');
+    const contentDisplay = listEl.querySelector('.content-display');
+    const normalButtons = listEl.querySelector('.normal-buttons');
+    const editButtons = listEl.querySelector('.edit-buttons');
+    
+    // Restore original content
+    contentEdit.textContent = contentEdit.dataset.originalContent;
+    contentDisplay.style.display = 'block';
+    contentEdit.style.display = 'none';
+    
+    // Show normal buttons, hide edit buttons
+    normalButtons.style.display = 'flex';
+    editButtons.style.display = 'none';
+}
+
 // Toggle card collapse
 function toggleCollapse(card) {
-    const content = card.querySelector('.drag-item-content');
+    const contentWrapper = card.querySelector('.drag-item-content-wrapper');
     const collapseBtn = card.querySelector('.collapse-btn');
     const column = findColumnForCard(card);
     const id = parseInt(card.id);
     
-    const isCollapsed = content.style.display === 'none';
-    content.style.display = isCollapsed ? 'block' : 'none';
+    const isCollapsed = contentWrapper.style.display === 'none';
+    contentWrapper.style.display = isCollapsed ? 'block' : 'none';
     collapseBtn.innerHTML = isCollapsed ? '▼' : '▶';
     
     if (isCollapsed) {
@@ -195,16 +322,6 @@ function toggleCollapse(card) {
             updateSavedColumns();
         }
     }
-}
-
-// Helper function to find which column a card belongs to
-function findColumnForCard(card) {
-    for (let i = 0; i < listColumns.length; i++) {
-        if (listColumns[i].contains(card)) {
-            return i;
-        }
-    }
-    return -1;
 }
 
 // Confirm and delete card
@@ -226,8 +343,9 @@ async function updateItem(id, column) {
     if (!dragging) {
         const item = selectedColumn[id];
         const title = item.querySelector('.drag-item-title');
-        const content = item.querySelector('.drag-item-content');
-        const isCollapsed = content.style.display === 'none';
+        const content = item.querySelector('.content-edit');
+        const contentWrapper = item.querySelector('.drag-item-content-wrapper');
+        const isCollapsed = contentWrapper.style.display === 'none';
         
         if (!title.textContent && !content.textContent) {
             delete selectedArray[id];
@@ -271,21 +389,23 @@ async function addToColumn(column) {
 async function updateDOM() {
     // Update project title
     const titleEl = document.querySelector('.main-title');
-    titleEl.textContent = projectName;
-    titleEl.contentEditable = true;
-    titleEl.addEventListener('focusout', updateProjectName);
+    if (titleEl) {
+        titleEl.textContent = projectName;
+        titleEl.contentEditable = true;
+        titleEl.addEventListener('focusout', updateProjectName);
+    }
     
-    // First, clear current cards
-    backlogListEl.textContent = "";
-    progressListEl.textContent = "";
-    completeListEl.textContent = "";
-    onHoldListEl.textContent = "";
+    // Check if list elements exist before updating
+    if (backlogListEl) backlogListEl.textContent = "";
+    if (progressListEl) progressListEl.textContent = "";
+    if (completeListEl) completeListEl.textContent = "";
+    if (onHoldListEl) onHoldListEl.textContent = "";
     
     // Create Cards
-    backlogListArray.forEach((item, index) => createItemEl(backlogListEl, 0, item, index));
-    progressListArray.forEach((item, index) => createItemEl(progressListEl, 1, item, index));
-    completeListArray.forEach((item, index) => createItemEl(completeListEl, 2, item, index));
-    onHoldListArray.forEach((item, index) => createItemEl(onHoldListEl, 3, item, index));
+    if (backlogListEl) backlogListArray.forEach((item, index) => createItemEl(backlogListEl, 0, item, index));
+    if (progressListEl) progressListArray.forEach((item, index) => createItemEl(progressListEl, 1, item, index));
+    if (completeListEl) completeListArray.forEach((item, index) => createItemEl(completeListEl, 2, item, index));
+    if (onHoldListEl) onHoldListArray.forEach((item, index) => createItemEl(onHoldListEl, 3, item, index));
     
     // Run getSavedColumns only if localStorage is empty
     if (!localStorage.getItem('kanbanData')) {
@@ -350,8 +470,8 @@ async function rebuildArrays() {
     for (let i = 0; i < backlogListEl.children.length; i++) {
         const item = backlogListEl.children[i];
         const title = item.querySelector('.drag-item-title');
-        const content = item.querySelector('.drag-item-content');
-        const isCollapsed = content.style.display === 'none';
+        const content = item.querySelector('.content-edit');
+        const isCollapsed = item.querySelector('.drag-item-content-wrapper').style.display === 'none';
         backlogListArray.push({
             title: title.textContent || '',
             content: content.textContent || '',
@@ -362,8 +482,8 @@ async function rebuildArrays() {
     for (let i = 0; i < progressListEl.children.length; i++) {
         const item = progressListEl.children[i];
         const title = item.querySelector('.drag-item-title');
-        const content = item.querySelector('.drag-item-content');
-        const isCollapsed = content.style.display === 'none';
+        const content = item.querySelector('.content-edit');
+        const isCollapsed = item.querySelector('.drag-item-content-wrapper').style.display === 'none';
         progressListArray.push({
             title: title.textContent || '',
             content: content.textContent || '',
@@ -374,8 +494,8 @@ async function rebuildArrays() {
     for (let i = 0; i < completeListEl.children.length; i++) {
         const item = completeListEl.children[i];
         const title = item.querySelector('.drag-item-title');
-        const content = item.querySelector('.drag-item-content');
-        const isCollapsed = content.style.display === 'none';
+        const content = item.querySelector('.content-edit');
+        const isCollapsed = item.querySelector('.drag-item-content-wrapper').style.display === 'none';
         completeListArray.push({
             title: title.textContent || '',
             content: content.textContent || '',
@@ -386,8 +506,8 @@ async function rebuildArrays() {
     for (let i = 0; i < onHoldListEl.children.length; i++) {
         const item = onHoldListEl.children[i];
         const title = item.querySelector('.drag-item-title');
-        const content = item.querySelector('.drag-item-content');
-        const isCollapsed = content.style.display === 'none';
+        const content = item.querySelector('.content-edit');
+        const isCollapsed = item.querySelector('.drag-item-content-wrapper').style.display === 'none';
         onHoldListArray.push({
             title: title.textContent || '',
             content: content.textContent || '',
@@ -396,6 +516,16 @@ async function rebuildArrays() {
     }
     await updateSavedColumns();
     updateDOM();
+}
+
+// Helper function to find which column a card belongs to
+function findColumnForCard(card) {
+    for (let i = 0; i < listColumns.length; i++) {
+        if (listColumns[i].contains(card)) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 // On Load
@@ -423,3 +553,13 @@ async function initialize() {
 
 // Initialize on page load
 initialize();
+
+// Make functions available globally
+window.showInputBox = showInputBox;
+window.hideInputBox = hideInputBox;
+window.addToColumn = addToColumn;
+window.updateItem = updateItem;
+window.drag = drag;
+window.allowDrop = allowDrop;
+window.drop = drop;
+window.updateProjectName = updateProjectName;
