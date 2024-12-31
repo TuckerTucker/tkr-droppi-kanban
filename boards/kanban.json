@@ -1,0 +1,19 @@
+{
+  "projectName": "This is the project name",
+  "backlogItems": [
+    {
+      "title": "Card Title",
+      "content": "Card description",
+      "collapsed": true
+    }
+  ],
+  "progressItems": [],
+  "completeItems": [
+    {
+      "title": "asdf",
+      "content": "# asdf\n\n\n**bold**\n_slanty_\n\n>this thing\n\n```\ncode yo.\n```",
+      "collapsed": true
+    }
+  ],
+  "onHoldItems": []
+}

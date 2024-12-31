@@ -157,6 +157,7 @@ ul {
 .drag-item {
 	margin: 10px;
 	padding: 0;
+	height: fit-content;
 	background-color: rgba(0, 0, 0, 0.3);
 	border-radius: 0.5em;
 	cursor: pointer;
@@ -170,6 +171,7 @@ ul {
 .drag-item-header {
 	display: flex;
 	align-items: center;
+	gap: 0.75em;
 	padding: 0.75em;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 	user-select: none;
@@ -180,7 +182,6 @@ ul {
 	font-size: 1.2em;
 	line-height: 1;
 	cursor: move;
-	margin-right: 0.75em;
 	user-select: none;
 }
 
@@ -195,63 +196,30 @@ ul {
 	line-height: 1.5;
 	letter-spacing: 1px;
 	outline: none;
-	padding-right: 0.75em;
 }
 
-.drag-item-actions {
-	display: flex;
-	gap: 0.5em;
-	align-items: center;
-}
-
-.normal-buttons,
-.edit-buttons {
-	display: flex;
-	gap: 0.25em;
-}
-
-.action-btn {
-	background: none;
-	border: none;
-	color: rgba(255, 255, 255, 0.7);
-	cursor: pointer;
-	font-size: 1em;
-	padding: 0.25em;
+.drag-item-title:focus {
+	background: rgba(0, 0, 0, 0.2);
 	border-radius: 0.25em;
-	transition: all 0.2s ease;
-}
-
-.action-btn:hover {
-	color: rgba(255, 255, 255, 0.9);
-	background-color: rgba(255, 255, 255, 0.1);
+	padding: 0 0.25em;
 }
 
 .drag-item-content-wrapper {
-	padding: 0.75em;
-	border-top: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
 }
 
-.content-edit,
-.content-display {
-	width: 100%;
-	min-height: 2em;
-	padding: 0.5em;
-	border-radius: 0.25em;
-	background-color: rgba(0, 0, 0, 0.2);
-}
-
-.content-edit {
-	outline: none;
-	white-space: pre-wrap;
-}
-
-.content-display {
-	line-height: 1.5;
+.drag-item-content {
+    padding: 0.75em;
+    min-height: 1em;
+    outline: none;
+    word-break: break-word;
 }
 
 .content-edit {
     white-space: pre-wrap;
     font-family: monospace;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 0.25em;
 }
 
 .content-display {
@@ -355,12 +323,35 @@ ul {
 }
 
 .drag-item-actions {
-    opacity: 0.5;
-    transition: opacity 0.2s ease;
+    display: flex;
+    gap: 0.25em;
 }
 
-.drag-item:hover .drag-item-actions {
-    opacity: 1;
+.normal-buttons,
+.edit-buttons {
+    display: flex;
+    gap: 0.25em;
+}
+
+.action-btn {
+    border: none;
+    background: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    font-size: 1em;
+    padding: 0.25em;
+    border-radius: 0.25em;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5em;
+    height: 1.5em;
+}
+
+.action-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
 }
 
 .save-btn {
@@ -396,6 +387,15 @@ ul {
 
 .collapse-btn.collapsed {
     transform: rotate(-90deg);
+}
+
+.drag-item-actions {
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+.drag-item:hover .drag-item-actions {
+    opacity: 1;
 }
 
 /* Add Button Group */

@@ -31,74 +31,16 @@ let draggedItem;
 let dragging = false;
 let currentColumn;
 
-// Set server data
-async function updateSavedColumns() {
-    const data = {
-        projectName,
-        backlogItems: backlogListArray,
-        progressItems: progressListArray,
-        completeItems: completeListArray,
-        onHoldItems: onHoldListArray,
-    };
-
-    console.log('Preparing to save data:', data);
-    console.log('Arrays state:', {
-        backlog: backlogListArray.length,
-        progress: progressListArray.length,
-        complete: completeListArray.length,
-        onHold: onHoldListArray.length
-    });
-
-    try {
-        console.log('Sending data to server...');
-        const response = await fetch('/api/kanban', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-        });
-        
-        console.log('Server response status:', response.status);
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Server error:', errorData);
-            throw new Error(errorData.error || 'Failed to save data to server');
-        }
-        
-        const result = await response.json();
-        console.log('Server response:', result);
-        
-        if (!result.success) {
-            throw new Error('Server did not confirm successful save');
-        }
-        
-        console.log('Successfully saved to server');
-    } catch (error) {
-        console.error('Error saving to server:', error);
-        alert(`Failed to save changes: ${error.message}`);
-        throw error;
-    }
-}
-
-// Load data from server
-async function loadFromServer() {
-    try {
-        const response = await fetch('/api/kanban');
-        if (!response.ok) {
-            throw new Error('Failed to load data from server');
-        }
-        const data = await response.json();
+// Get Arrays from localStorage if available, set default values if not
+function getSavedColumns() {
+    if (localStorage.getItem('kanbanData')) {
+        const data = JSON.parse(localStorage.getItem('kanbanData'));
         projectName = data.projectName || 'My Kanban Board';
         backlogListArray = data.backlogItems || [];
         progressListArray = data.progressItems || [];
         completeListArray = data.completeItems || [];
         onHoldListArray = data.onHoldItems || [];
-        console.log('Loaded data from server:', data);
-    } catch (error) {
-        console.error('Error loading from server:', error);
-        // Use empty arrays if server load fails
+    } else {
         projectName = 'My Kanban Board';
         backlogListArray = [];
         progressListArray = [];
@@ -107,13 +49,29 @@ async function loadFromServer() {
     }
 }
 
-// Initialize on page load
-async function initialize() {
+// Set localStorage Arrays
+async function updateSavedColumns() {
+    const data = {
+        projectName,
+        backlogItems: backlogListArray,
+        progressItems: progressListArray,
+        completeItems: completeListArray,
+        onHoldItems: onHoldListArray,
+    };
+    localStorage.setItem('kanbanData', JSON.stringify(data));
     try {
-        await loadFromServer();
-        updateDOM();
+        const response = await fetch('/api/kanban', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to save data to server');
+        }
     } catch (error) {
-        console.error('Initialization error:', error);
+        console.error('Error saving to server:', error);
     }
 }
 
@@ -127,17 +85,22 @@ function updateDOM() {
         titleEl.addEventListener('focusout', updateProjectName);
     }
     
-    // Clear lists
-    if (backlogListEl) backlogListEl.textContent = '';
-    if (progressListEl) progressListEl.textContent = '';
-    if (completeListEl) completeListEl.textContent = '';
-    if (onHoldListEl) onHoldListEl.textContent = '';
+    // Check if list elements exist before updating
+    if (backlogListEl) backlogListEl.textContent = "";
+    if (progressListEl) progressListEl.textContent = "";
+    if (completeListEl) completeListEl.textContent = "";
+    if (onHoldListEl) onHoldListEl.textContent = "";
     
     // Create Cards
     if (backlogListEl) backlogListArray.forEach((item, index) => createItemEl(backlogListEl, 0, item, index));
     if (progressListEl) progressListArray.forEach((item, index) => createItemEl(progressListEl, 1, item, index));
     if (completeListEl) completeListArray.forEach((item, index) => createItemEl(completeListEl, 2, item, index));
     if (onHoldListEl) onHoldListArray.forEach((item, index) => createItemEl(onHoldListEl, 3, item, index));
+    
+    // Run getSavedColumns only if localStorage is empty
+    if (!localStorage.getItem('kanbanData')) {
+        updateSavedColumns();
+    }
 }
 
 // Update Project Name
@@ -159,129 +122,120 @@ marked.use({
 
 // Create DOM Elements for each list item
 function createItemEl(columnEl, column, item, index) {
-    // List Item
-    const listEl = document.createElement('li');
+    const listEl = document.createElement("li");
     listEl.id = index;
-    listEl.classList.add('drag-item');
+    listEl.classList.add("drag-item");
     listEl.draggable = true;
-    listEl.setAttribute('ondragstart', 'drag(event)');
-
-    // Header
-    const header = document.createElement('div');
-    header.classList.add('drag-item-header');
-
-    // Drag Icon
-    const dragIcon = document.createElement('span');
-    dragIcon.classList.add('drag-icon');
-    dragIcon.innerHTML = '⋮⋮';
+    listEl.setAttribute("ondragstart", "drag(event)");
+    
+    // Create header
+    const header = document.createElement("div");
+    header.classList.add("drag-item-header");
+    
+    // Add drag icon
+    const dragIcon = document.createElement("span");
+    dragIcon.classList.add("drag-icon");
+    dragIcon.innerHTML = "⋮⋮";
     header.appendChild(dragIcon);
-
-    // Title
-    const title = document.createElement('div');
-    title.classList.add('drag-item-title');
+    
+    // Add title
+    const title = document.createElement("div");
+    title.classList.add("drag-item-title");
     title.contentEditable = true;
     title.textContent = item.title || '';
-    title.setAttribute('onfocusout', `updateItem(${index}, ${column})`);
+    title.setAttribute("onfocusout", `updateItem(${index}, ${column})`);
     header.appendChild(title);
-
-    // Actions Container
-    const actions = document.createElement('div');
-    actions.classList.add('drag-item-actions');
-
-    // Normal Buttons
-    const normalButtons = document.createElement('div');
-    normalButtons.classList.add('normal-buttons');
-
-    // Collapse Button
-    const collapseBtn = document.createElement('button');
-    collapseBtn.classList.add('action-btn', 'collapse-btn');
-    collapseBtn.innerHTML = item.collapsed ? '▶' : '▼';
+    
+    // Add action buttons container
+    const actions = document.createElement("div");
+    actions.classList.add("drag-item-actions");
+    
+    // Create normal buttons (collapse and delete)
+    const normalButtons = document.createElement("div");
+    normalButtons.classList.add("normal-buttons");
+    
+    // Add collapse button
+    const collapseBtn = document.createElement("button");
+    collapseBtn.classList.add("action-btn", "collapse-btn");
+    collapseBtn.innerHTML = item.collapsed ? "▶" : "▼";
+    if (item.collapsed) collapseBtn.classList.add("collapsed");
     collapseBtn.onclick = () => toggleCollapse(listEl);
     normalButtons.appendChild(collapseBtn);
-
-    // Edit Button
-    const editBtn = document.createElement('button');
-    editBtn.classList.add('action-btn', 'edit-btn');
-    editBtn.innerHTML = '✎';
-    editBtn.onclick = () => {
-        // Expand card if collapsed
-        const contentWrapper = listEl.querySelector('.drag-item-content-wrapper');
-        const collapseBtn = listEl.querySelector('.collapse-btn');
-        if (contentWrapper.style.display === 'none') {
-            contentWrapper.style.display = 'block';
-            collapseBtn.innerHTML = '▼';
-        }
-        
-        const contentEdit = listEl.querySelector('.content-edit');
-        const contentDisplay = listEl.querySelector('.content-display');
-        const editButtons = listEl.querySelector('.edit-buttons');
-        contentEdit.style.display = 'block';
-        contentDisplay.style.display = 'none';
-        normalButtons.style.display = 'none';
-        editButtons.style.display = 'flex';
-        contentEdit.focus();
-    };
-    normalButtons.appendChild(editBtn);
-
-    // Delete Button
-    const deleteBtn = document.createElement('button');
-    deleteBtn.classList.add('action-btn', 'delete-btn');
-    deleteBtn.innerHTML = '×';
+    
+    // Add delete button
+    const deleteBtn = document.createElement("button");
+    deleteBtn.classList.add("action-btn", "delete-btn");
+    deleteBtn.innerHTML = "×";
     deleteBtn.onclick = () => confirmDelete(index, column);
     normalButtons.appendChild(deleteBtn);
-
-    // Edit Buttons
-    const editButtons = document.createElement('div');
-    editButtons.classList.add('edit-buttons');
+    
+    // Create edit buttons (save and cancel)
+    const editButtons = document.createElement("div");
+    editButtons.classList.add("edit-buttons");
     editButtons.style.display = 'none';
-
-    // Save Button
-    const saveBtn = document.createElement('button');
-    saveBtn.classList.add('action-btn', 'save-btn');
-    saveBtn.innerHTML = '✓';
+    
+    // Add save button
+    const saveBtn = document.createElement("button");
+    saveBtn.classList.add("action-btn", "save-btn");
+    saveBtn.innerHTML = "✓";
     saveBtn.onclick = () => saveContent(listEl, index, column);
     editButtons.appendChild(saveBtn);
-
-    // Cancel Button
-    const cancelBtn = document.createElement('button');
-    cancelBtn.classList.add('action-btn', 'cancel-btn');
-    cancelBtn.innerHTML = '↺';
+    
+    // Add cancel button
+    const cancelBtn = document.createElement("button");
+    cancelBtn.classList.add("action-btn", "cancel-btn");
+    cancelBtn.innerHTML = "↺";
     cancelBtn.onclick = () => cancelEdit(listEl, item);
     editButtons.appendChild(cancelBtn);
-
+    
     // Add both button sets to actions
     actions.appendChild(normalButtons);
     actions.appendChild(editButtons);
     header.appendChild(actions);
-
-    // Content Wrapper
-    const contentWrapper = document.createElement('div');
-    contentWrapper.classList.add('drag-item-content-wrapper');
-    if (item.collapsed) {
-        contentWrapper.style.display = 'none';
-    }
-
-    // Content Edit
-    const contentEdit = document.createElement('div');
-    contentEdit.classList.add('content-edit');
+    
+    // Create content wrapper for edit/display modes
+    const contentWrapper = document.createElement("div");
+    contentWrapper.classList.add("drag-item-content-wrapper");
+    
+    // Add content for editing
+    const contentEdit = document.createElement("div");
+    contentEdit.classList.add("drag-item-content", "content-edit");
     contentEdit.contentEditable = true;
     contentEdit.textContent = item.content || '';
     contentEdit.style.display = 'none';
+    
+    // Store original content for cancel functionality
     contentEdit.dataset.originalContent = item.content || '';
-    contentWrapper.appendChild(contentEdit);
-
-    // Content Display
-    const contentDisplay = document.createElement('div');
-    contentDisplay.classList.add('content-display');
+    
+    // Add content for display (with markdown)
+    const contentDisplay = document.createElement("div");
+    contentDisplay.classList.add("drag-item-content", "content-display");
     contentDisplay.innerHTML = marked.parse(item.content || '');
+    
+    // Add click handler to switch between edit and display modes
+    contentDisplay.addEventListener('click', () => {
+        contentDisplay.style.display = 'none';
+        contentEdit.style.display = 'block';
+        contentEdit.focus();
+        
+        // Show edit buttons, hide normal buttons
+        normalButtons.style.display = 'none';
+        editButtons.style.display = 'flex';
+    });
+    
+    contentWrapper.appendChild(contentEdit);
     contentWrapper.appendChild(contentDisplay);
-
+    
+    if (item.collapsed) {
+        contentWrapper.style.display = 'none';
+    }
+    
     // Assemble the card
     listEl.appendChild(header);
     listEl.appendChild(contentWrapper);
+    
+    // Append to column
     columnEl.appendChild(listEl);
-
-    return listEl;
 }
 
 // Save content changes
@@ -292,7 +246,7 @@ async function saveContent(listEl, index, column) {
     const editButtons = listEl.querySelector('.edit-buttons');
     const title = listEl.querySelector('.drag-item-title');
     
-    // Update display content with markdown
+    // Update display content
     contentDisplay.innerHTML = marked.parse(contentEdit.textContent || '');
     contentDisplay.style.display = 'block';
     contentEdit.style.display = 'none';
@@ -306,18 +260,16 @@ async function saveContent(listEl, index, column) {
     if (selectedArray) {
         selectedArray[index] = {
             ...selectedArray[index],
-            title: title.textContent.trim() || '',
-            content: contentEdit.textContent.trim() || '',
+            title: title.textContent || '',
+            content: contentEdit.textContent || '',
             collapsed: listEl.querySelector('.drag-item-content-wrapper').style.display === 'none'
         };
         
-        console.log('Saving card data:', selectedArray[index]);
-        
         // Save to server
         try {
-            await rebuildArrays(); // This will trigger updateSavedColumns
+            await updateSavedColumns();
             // Update the original content after successful save
-            contentEdit.dataset.originalContent = contentEdit.textContent.trim() || '';
+            contentEdit.dataset.originalContent = contentEdit.textContent || '';
         } catch (error) {
             console.error('Failed to save changes:', error);
             // Show error message to user
@@ -399,9 +351,8 @@ async function updateItem(id, column) {
             delete selectedArray[id];
         } else {
             selectedArray[id] = {
-                ...selectedArray[id],
-                title: title.textContent.trim() || '',
-                content: content.textContent.trim() || '',
+                title: title.textContent || '',
+                content: content.textContent || '',
                 collapsed: isCollapsed
             };
         }
@@ -419,83 +370,19 @@ async function addToColumn(column) {
     // Only add if title is not empty
     if (!title.textContent.trim()) return;
     
-    console.log('Adding new card to column:', column);
-    console.log('Title:', title.textContent.trim());
-    console.log('Content:', content.textContent.trim());
-    
-    // Create the card element
-    const columnEl = listColumns[column];
-    const newCard = document.createElement('li');
-    newCard.classList.add('drag-item');
-    newCard.draggable = true;
-    
-    // Add the card data
-    const cardData = {
+    const selectedArray = listArrays[column];
+    selectedArray.push({
         title: title.textContent.trim(),
         content: content.textContent.trim(),
         collapsed: false
-    };
-    
-    console.log('New card data:', cardData);
-    
-    // Create and append the card
-    createItemEl(columnEl, column, cardData, columnEl.children.length);
+    });
     
     // Reset input fields
     title.textContent = '';
     content.textContent = '';
     
-    try {
-        console.log('Rebuilding arrays...');
-        await rebuildArrays();
-        console.log('Arrays rebuilt, saving to server...');
-        await updateSavedColumns();
-        console.log('Save successful');
-    } catch (error) {
-        console.error('Failed to save new card:', error);
-        // Remove the card if save failed
-        columnEl.removeChild(columnEl.lastChild);
-        alert('Failed to save card. Please try again.');
-    }
-}
-
-// Allows arrays to reflect Drag and Drop items
-async function rebuildArrays() {
-    const getCardData = (item) => {
-        const title = item.querySelector('.drag-item-title');
-        const content = item.querySelector('.content-edit');
-        const contentWrapper = item.querySelector('.drag-item-content-wrapper');
-        const data = {
-            title: title ? title.textContent.trim() : '',
-            content: content ? content.textContent.trim() : '',
-            collapsed: contentWrapper ? contentWrapper.style.display === 'none' : false
-        };
-        console.log('Card data:', data);
-        return data;
-    };
-
-    console.log('Rebuilding arrays...');
-    
-    // Rebuild backlog items
-    backlogListArray = Array.from(backlogListEl.children).map(getCardData);
-    console.log('Backlog items:', backlogListArray);
-
-    // Rebuild progress items
-    progressListArray = Array.from(progressListEl.children).map(getCardData);
-    console.log('Progress items:', progressListArray);
-
-    // Rebuild complete items
-    completeListArray = Array.from(completeListEl.children).map(getCardData);
-    console.log('Complete items:', completeListArray);
-
-    // Rebuild on hold items
-    onHoldListArray = Array.from(onHoldListEl.children).map(getCardData);
-    console.log('On hold items:', onHoldListArray);
-
-    // Update the listArrays reference
-    listArrays = [backlogListArray, progressListArray, completeListArray, onHoldListArray];
-    
-    console.log('Arrays rebuilt');
+    await updateSavedColumns();
+    updateDOM();
 }
 
 // Update Columns in DOM - Reset HTML, Filter Array, Update localStorage
@@ -519,6 +406,11 @@ async function updateDOM() {
     if (progressListEl) progressListArray.forEach((item, index) => createItemEl(progressListEl, 1, item, index));
     if (completeListEl) completeListArray.forEach((item, index) => createItemEl(completeListEl, 2, item, index));
     if (onHoldListEl) onHoldListArray.forEach((item, index) => createItemEl(onHoldListEl, 3, item, index));
+    
+    // Run getSavedColumns only if localStorage is empty
+    if (!localStorage.getItem('kanbanData')) {
+        updateSavedColumns();
+    }
 }
 
 // When Item Enters Column Area
@@ -572,6 +464,60 @@ function hideInputBox(column) {
     addToColumn(column);
 }
 
+// Allows arrays to reflect Drag and Drop items
+async function rebuildArrays() {
+    backlogListArray = [];
+    for (let i = 0; i < backlogListEl.children.length; i++) {
+        const item = backlogListEl.children[i];
+        const title = item.querySelector('.drag-item-title');
+        const content = item.querySelector('.content-edit');
+        const isCollapsed = item.querySelector('.drag-item-content-wrapper').style.display === 'none';
+        backlogListArray.push({
+            title: title.textContent || '',
+            content: content.textContent || '',
+            collapsed: isCollapsed
+        });
+    }
+    progressListArray = [];
+    for (let i = 0; i < progressListEl.children.length; i++) {
+        const item = progressListEl.children[i];
+        const title = item.querySelector('.drag-item-title');
+        const content = item.querySelector('.content-edit');
+        const isCollapsed = item.querySelector('.drag-item-content-wrapper').style.display === 'none';
+        progressListArray.push({
+            title: title.textContent || '',
+            content: content.textContent || '',
+            collapsed: isCollapsed
+        });
+    }
+    completeListArray = [];
+    for (let i = 0; i < completeListEl.children.length; i++) {
+        const item = completeListEl.children[i];
+        const title = item.querySelector('.drag-item-title');
+        const content = item.querySelector('.content-edit');
+        const isCollapsed = item.querySelector('.drag-item-content-wrapper').style.display === 'none';
+        completeListArray.push({
+            title: title.textContent || '',
+            content: content.textContent || '',
+            collapsed: isCollapsed
+        });
+    }
+    onHoldListArray = [];
+    for (let i = 0; i < onHoldListEl.children.length; i++) {
+        const item = onHoldListEl.children[i];
+        const title = item.querySelector('.drag-item-title');
+        const content = item.querySelector('.content-edit');
+        const isCollapsed = item.querySelector('.drag-item-content-wrapper').style.display === 'none';
+        onHoldListArray.push({
+            title: title.textContent || '',
+            content: content.textContent || '',
+            collapsed: isCollapsed
+        });
+    }
+    await updateSavedColumns();
+    updateDOM();
+}
+
 // Helper function to find which column a card belongs to
 function findColumnForCard(card) {
     for (let i = 0; i < listColumns.length; i++) {
@@ -582,6 +528,32 @@ function findColumnForCard(card) {
     return -1;
 }
 
+// On Load
+async function initialize() {
+    try {
+        const response = await fetch('/api/kanban');
+        if (response.ok) {
+            const data = await response.json();
+            projectName = data.projectName;
+            backlogListArray = data.backlogItems;
+            progressListArray = data.progressItems;
+            completeListArray = data.completeItems;
+            onHoldListArray = data.onHoldItems;
+            updateDOM();
+        } else {
+            getSavedColumns();
+            updateDOM();
+        }
+    } catch (error) {
+        console.error('Error loading from server:', error);
+        getSavedColumns();
+        updateDOM();
+    }
+}
+
+// Initialize on page load
+initialize();
+
 // Make functions available globally
 window.showInputBox = showInputBox;
 window.hideInputBox = hideInputBox;
@@ -591,6 +563,3 @@ window.drag = drag;
 window.allowDrop = allowDrop;
 window.drop = drop;
 window.updateProjectName = updateProjectName;
-
-// Initialize on page load
-initialize();
