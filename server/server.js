@@ -8,14 +8,19 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static('.'));
 
-const DATA_FILE = path.join(__dirname, 'data', 'kanban.json');
+// Serve static files from app directory
+app.use(express.static(path.join(__dirname, '../app')));
+app.use('/css', express.static(path.join(__dirname, '../css')));
+app.use('/img', express.static(path.join(__dirname, '../img')));
 
-// Ensure data directory exists
-async function ensureDataDir() {
+const BOARDS_DIR = path.join(__dirname, '../boards');
+const DATA_FILE = path.join(BOARDS_DIR, 'kanban.json');
+
+// Ensure boards directory exists
+async function ensureBoardsDir() {
     try {
-        await fs.mkdir(path.join(__dirname, 'data'), { recursive: true });
+        await fs.mkdir(BOARDS_DIR, { recursive: true });
     } catch (err) {
         if (err.code !== 'EEXIST') throw err;
     }
@@ -57,10 +62,15 @@ app.post('/api/kanban', async (req, res) => {
     }
 });
 
+// Serve index.html for all other routes
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../app/index.html'));
+});
+
 // Initialize server
 async function init() {
     try {
-        await ensureDataDir();
+        await ensureBoardsDir();
         await initDataFile();
         
         const server = app.listen(PORT, () => {
