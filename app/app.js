@@ -133,12 +133,34 @@ function createItemEl(columnEl, column, item, index) {
     title.setAttribute("onfocusout", `updateItem(${index}, ${column})`);
     header.appendChild(title);
     
+    // Add action buttons container
+    const actions = document.createElement("div");
+    actions.classList.add("drag-item-actions");
+    
+    // Add collapse button
+    const collapseBtn = document.createElement("button");
+    collapseBtn.classList.add("action-btn", "collapse-btn");
+    collapseBtn.innerHTML = item.collapsed ? "▶" : "▼";
+    if (item.collapsed) collapseBtn.classList.add("collapsed");
+    collapseBtn.onclick = () => toggleCollapse(listEl);
+    actions.appendChild(collapseBtn);
+    
+    // Add delete button
+    const deleteBtn = document.createElement("button");
+    deleteBtn.classList.add("action-btn", "delete-btn");
+    deleteBtn.innerHTML = "×";
+    deleteBtn.onclick = () => confirmDelete(index, column);
+    actions.appendChild(deleteBtn);
+    
+    header.appendChild(actions);
+    
     // Add content container
     const content = document.createElement("div");
     content.classList.add("drag-item-content");
     content.contentEditable = true;
     content.textContent = item.content || '';
     content.setAttribute("onfocusout", `updateItem(${index}, ${column})`);
+    if (item.collapsed) content.style.display = 'none';
     
     // Assemble the card
     listEl.appendChild(header);
@@ -146,6 +168,55 @@ function createItemEl(columnEl, column, item, index) {
     
     // Append to column
     columnEl.appendChild(listEl);
+}
+
+// Toggle card collapse
+function toggleCollapse(card) {
+    const content = card.querySelector('.drag-item-content');
+    const collapseBtn = card.querySelector('.collapse-btn');
+    const column = findColumnForCard(card);
+    const id = parseInt(card.id);
+    
+    const isCollapsed = content.style.display === 'none';
+    content.style.display = isCollapsed ? 'block' : 'none';
+    collapseBtn.innerHTML = isCollapsed ? '▼' : '▶';
+    
+    if (isCollapsed) {
+        collapseBtn.classList.remove('collapsed');
+    } else {
+        collapseBtn.classList.add('collapsed');
+    }
+    
+    // Update the collapsed state in the data structure
+    if (column !== -1 && !isNaN(id)) {
+        const selectedArray = listArrays[column];
+        if (selectedArray[id]) {
+            selectedArray[id].collapsed = !isCollapsed;
+            updateSavedColumns();
+        }
+    }
+}
+
+// Helper function to find which column a card belongs to
+function findColumnForCard(card) {
+    for (let i = 0; i < listColumns.length; i++) {
+        if (listColumns[i].contains(card)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// Confirm and delete card
+function confirmDelete(id, column) {
+    const selectedArray = listArrays[column];
+    const item = selectedArray[id];
+    
+    if (confirm(`Delete "${item.title}"?`)) {
+        selectedArray.splice(id, 1);
+        updateSavedColumns();
+        updateDOM();
+    }
 }
 
 // Update Item - Delete if necessary, or update Array value
@@ -156,13 +227,15 @@ async function updateItem(id, column) {
         const item = selectedColumn[id];
         const title = item.querySelector('.drag-item-title');
         const content = item.querySelector('.drag-item-content');
+        const isCollapsed = content.style.display === 'none';
         
         if (!title.textContent && !content.textContent) {
             delete selectedArray[id];
         } else {
             selectedArray[id] = {
                 title: title.textContent || '',
-                content: content.textContent || ''
+                content: content.textContent || '',
+                collapsed: isCollapsed
             };
         }
         await updateSavedColumns();
@@ -182,7 +255,8 @@ async function addToColumn(column) {
     const selectedArray = listArrays[column];
     selectedArray.push({
         title: title.textContent.trim(),
-        content: content.textContent.trim()
+        content: content.textContent.trim(),
+        collapsed: false
     });
     
     // Reset input fields
@@ -237,9 +311,11 @@ async function rebuildArrays() {
         const item = backlogListEl.children[i];
         const title = item.querySelector('.drag-item-title');
         const content = item.querySelector('.drag-item-content');
+        const isCollapsed = content.style.display === 'none';
         backlogListArray.push({
             title: title.textContent || '',
-            content: content.textContent || ''
+            content: content.textContent || '',
+            collapsed: isCollapsed
         });
     }
     progressListArray = [];
@@ -247,9 +323,11 @@ async function rebuildArrays() {
         const item = progressListEl.children[i];
         const title = item.querySelector('.drag-item-title');
         const content = item.querySelector('.drag-item-content');
+        const isCollapsed = content.style.display === 'none';
         progressListArray.push({
             title: title.textContent || '',
-            content: content.textContent || ''
+            content: content.textContent || '',
+            collapsed: isCollapsed
         });
     }
     completeListArray = [];
@@ -257,9 +335,11 @@ async function rebuildArrays() {
         const item = completeListEl.children[i];
         const title = item.querySelector('.drag-item-title');
         const content = item.querySelector('.drag-item-content');
+        const isCollapsed = content.style.display === 'none';
         completeListArray.push({
             title: title.textContent || '',
-            content: content.textContent || ''
+            content: content.textContent || '',
+            collapsed: isCollapsed
         });
     }
     onHoldListArray = [];
@@ -267,9 +347,11 @@ async function rebuildArrays() {
         const item = onHoldListEl.children[i];
         const title = item.querySelector('.drag-item-title');
         const content = item.querySelector('.drag-item-content');
+        const isCollapsed = content.style.display === 'none';
         onHoldListArray.push({
             title: title.textContent || '',
-            content: content.textContent || ''
+            content: content.textContent || '',
+            collapsed: isCollapsed
         });
     }
     await updateSavedColumns();
