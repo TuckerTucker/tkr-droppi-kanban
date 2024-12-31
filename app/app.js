@@ -11,6 +11,7 @@ const completeListEl = document.getElementById("done-list");
 const onHoldListEl = document.getElementById("on-hold-list");
 
 // Items
+let projectName = 'My Kanban Board';
 let updatedOnLoad = false;
 
 // Initialize Arrays
@@ -25,86 +26,85 @@ let draggedItem;
 let dragging = false;
 let currentColumn;
 
-// Get Arrays from server
-async function getSavedColumns() {
-    try {
-        const response = await fetch('http://localhost:3001/api/kanban');
-        const data = await response.json();
-        
-        if (response.ok) {
-            backlogListArray = data.backlogItems;
-            progressListArray = data.progressItems;
-            completeListArray = data.completeItems;
-            onHoldListArray = data.onHoldItems;
-        } else {
-            const intro = prompt(
-                "Type 'y' (Yes) if you want to display an Editable Sample? \n(Not typing 'y' will display a plane NEW board.)"
-            );
-            if (intro === "y" || intro === "Y") {
-                backlogListArray = [
-                    { title: "Write the documentation", content: "" },
-                    { title: "Post a technical article", content: "" },
-                ];
-                progressListArray = [
-                    { title: "Work on Droppi project", content: "" },
-                    { title: "Listen to Spotify", content: "" },
-                ];
-                completeListArray = [
-                    { title: "Submit a PR", content: "" },
-                    { title: "Review my projects code", content: "" },
-                ];
-                onHoldListArray = [
-                    { title: "Get a girlfriend", content: "" },
-                ];
-            } else {
-                backlogListArray = [];
-                progressListArray = [];
-                completeListArray = [];
-                onHoldListArray = [];
-            }
-        }
-    } catch (error) {
-        console.error('Error fetching data:', error);
+// Get Arrays from localStorage if available, set default values if not
+function getSavedColumns() {
+    if (localStorage.getItem('kanbanData')) {
+        const data = JSON.parse(localStorage.getItem('kanbanData'));
+        projectName = data.projectName || 'My Kanban Board';
+        backlogListArray = data.backlogItems || [];
+        progressListArray = data.progressItems || [];
+        completeListArray = data.completeItems || [];
+        onHoldListArray = data.onHoldItems || [];
+    } else {
+        projectName = 'My Kanban Board';
+        backlogListArray = [];
+        progressListArray = [];
+        completeListArray = [];
+        onHoldListArray = [];
     }
 }
 
-// Save Arrays to server
+// Set localStorage Arrays
 async function updateSavedColumns() {
-    listArrays = [
-        backlogListArray,
-        progressListArray,
-        completeListArray,
-        onHoldListArray,
-    ];
-    
     const data = {
+        projectName,
         backlogItems: backlogListArray,
         progressItems: progressListArray,
         completeItems: completeListArray,
-        onHoldItems: onHoldListArray
+        onHoldItems: onHoldListArray,
     };
-
+    localStorage.setItem('kanbanData', JSON.stringify(data));
     try {
-        const response = await fetch('http://localhost:3001/api/kanban', {
+        const response = await fetch('/api/kanban', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(data)
+            body: JSON.stringify(data),
         });
-        
         if (!response.ok) {
-            console.error('Error saving data');
+            throw new Error('Failed to save data to server');
         }
     } catch (error) {
-        console.error('Error saving data:', error);
+        console.error('Error saving to server:', error);
     }
 }
 
-// Filter Array to remove empty values
-function filterArray(array) {
-    const filteredArray = array.filter((item) => item !== null);
-    return filteredArray;
+// Update DOM - Create Project Title and Cards
+function updateDOM() {
+    // Update project title
+    const titleEl = document.querySelector('.main-title');
+    titleEl.textContent = projectName;
+    titleEl.contentEditable = true;
+    titleEl.addEventListener('focusout', updateProjectName);
+    
+    // First, clear current cards
+    backlogListEl.textContent = "";
+    progressListEl.textContent = "";
+    completeListEl.textContent = "";
+    onHoldListEl.textContent = "";
+    
+    // Create Cards
+    backlogListArray.forEach((item, index) => createItemEl(backlogListEl, 0, item, index));
+    progressListArray.forEach((item, index) => createItemEl(progressListEl, 1, item, index));
+    completeListArray.forEach((item, index) => createItemEl(completeListEl, 2, item, index));
+    onHoldListArray.forEach((item, index) => createItemEl(onHoldListEl, 3, item, index));
+    
+    // Run getSavedColumns only if localStorage is empty
+    if (!localStorage.getItem('kanbanData')) {
+        updateSavedColumns();
+    }
+}
+
+// Update Project Name
+async function updateProjectName(e) {
+    const newName = e.target.textContent.trim();
+    if (newName && newName !== projectName) {
+        projectName = newName;
+        await updateSavedColumns();
+    } else {
+        e.target.textContent = projectName;
+    }
 }
 
 // Create DOM Elements for each list item
@@ -269,39 +269,79 @@ async function addToColumn(column) {
 
 // Update Columns in DOM - Reset HTML, Filter Array, Update localStorage
 async function updateDOM() {
-    // Check localStorage once
-    if (!updatedOnLoad) {
-        await getSavedColumns();
-    }
-    // Backlog Column
+    // Update project title
+    const titleEl = document.querySelector('.main-title');
+    titleEl.textContent = projectName;
+    titleEl.contentEditable = true;
+    titleEl.addEventListener('focusout', updateProjectName);
+    
+    // First, clear current cards
     backlogListEl.textContent = "";
-    backlogListArray.forEach((backlogItem, index) => {
-        createItemEl(backlogListEl, 0, backlogItem, index);
-    });
-    backlogListArray = filterArray(backlogListArray);
-    // Progress Column
     progressListEl.textContent = "";
-    progressListArray.forEach((progressItem, index) => {
-        createItemEl(progressListEl, 1, progressItem, index);
-    });
-    progressListArray = filterArray(progressListArray);
-    // Complete Column
     completeListEl.textContent = "";
-    completeListArray.forEach((completeItem, index) => {
-        createItemEl(completeListEl, 2, completeItem, index);
-    });
-    completeListArray = filterArray(completeListArray);
-    // On Hold Column
     onHoldListEl.textContent = "";
-    onHoldListArray.forEach((onHoldItem, index) => {
-        createItemEl(onHoldListEl, 3, onHoldItem, index);
-    });
-    onHoldListArray = filterArray(onHoldListArray);
-    // Run getSavedColumns only once, Update Local Storage
-    updatedOnLoad = true;
-    if (updatedOnLoad) {
-        await updateSavedColumns();
+    
+    // Create Cards
+    backlogListArray.forEach((item, index) => createItemEl(backlogListEl, 0, item, index));
+    progressListArray.forEach((item, index) => createItemEl(progressListEl, 1, item, index));
+    completeListArray.forEach((item, index) => createItemEl(completeListEl, 2, item, index));
+    onHoldListArray.forEach((item, index) => createItemEl(onHoldListEl, 3, item, index));
+    
+    // Run getSavedColumns only if localStorage is empty
+    if (!localStorage.getItem('kanbanData')) {
+        updateSavedColumns();
     }
+}
+
+// When Item Enters Column Area
+function dragEnter(column) {
+    listColumns[column].classList.add("over");
+    currentColumn = column;
+}
+
+// When Item Starts Dragging
+function drag(e) {
+    draggedItem = e.target;
+    dragging = true;
+}
+
+// Column Allows for Item to Drop
+function allowDrop(e) {
+    e.preventDefault();
+}
+
+// Dropping Item in Column
+async function drop(e) {
+    e.preventDefault();
+    const parent = listColumns[currentColumn];
+    // Remove Background Color/Padding
+    listColumns.forEach((column) => {
+        column.classList.remove("over");
+    });
+    // Add item to Column
+    parent.appendChild(draggedItem);
+    // Dragging complete
+    dragging = false;
+    await rebuildArrays();
+}
+
+// Show Add Item Input Box
+function showInputBox(column) {
+    addBtns[column].style.visibility = "hidden";
+    saveItemBtns[column].style.display = "flex";
+    addItemContainers[column].style.display = "flex";
+    
+    // Focus on title field
+    const titleField = addItemContainers[column].querySelector('.add-item-title');
+    titleField.focus();
+}
+
+// Hide Item Input Box
+function hideInputBox(column) {
+    addBtns[column].style.visibility = "visible";
+    saveItemBtns[column].style.display = "none";
+    addItemContainers[column].style.display = "none";
+    addToColumn(column);
 }
 
 // Allows arrays to reflect Drag and Drop items
@@ -358,56 +398,28 @@ async function rebuildArrays() {
     updateDOM();
 }
 
-// When Item Enters Column Area
-function dragEnter(column) {
-    listColumns[column].classList.add("over");
-    currentColumn = column;
-}
-
-// When Item Starts Dragging
-function drag(e) {
-    draggedItem = e.target;
-    dragging = true;
-}
-
-// Column Allows for Item to Drop
-function allowDrop(e) {
-    e.preventDefault();
-}
-
-// Dropping Item in Column
-async function drop(e) {
-    e.preventDefault();
-    const parent = listColumns[currentColumn];
-    // Remove Background Color/Padding
-    listColumns.forEach((column) => {
-        column.classList.remove("over");
-    });
-    // Add item to Column
-    parent.appendChild(draggedItem);
-    // Dragging complete
-    dragging = false;
-    await rebuildArrays();
-}
-
-// Show Add Item Input Box
-function showInputBox(column) {
-    addBtns[column].style.visibility = "hidden";
-    saveItemBtns[column].style.display = "flex";
-    addItemContainers[column].style.display = "flex";
-    
-    // Focus on title field
-    const titleField = addItemContainers[column].querySelector('.add-item-title');
-    titleField.focus();
-}
-
-// Hide Item Input Box
-function hideInputBox(column) {
-    addBtns[column].style.visibility = "visible";
-    saveItemBtns[column].style.display = "none";
-    addItemContainers[column].style.display = "none";
-    addToColumn(column);
-}
-
 // On Load
-updateDOM();
+async function initialize() {
+    try {
+        const response = await fetch('/api/kanban');
+        if (response.ok) {
+            const data = await response.json();
+            projectName = data.projectName;
+            backlogListArray = data.backlogItems;
+            progressListArray = data.progressItems;
+            completeListArray = data.completeItems;
+            onHoldListArray = data.onHoldItems;
+            updateDOM();
+        } else {
+            getSavedColumns();
+            updateDOM();
+        }
+    } catch (error) {
+        console.error('Error loading from server:', error);
+        getSavedColumns();
+        updateDOM();
+    }
+}
+
+// Initialize on page load
+initialize();

@@ -32,6 +32,7 @@ async function initDataFile() {
         await fs.access(DATA_FILE);
     } catch {
         const initialData = {
+            projectName: "My Kanban Board",
             backlogItems: [],
             progressItems: [],
             completeItems: [],
@@ -55,7 +56,12 @@ app.get('/api/kanban', async (req, res) => {
 // Update kanban data
 app.post('/api/kanban', async (req, res) => {
     try {
-        const { backlogItems, progressItems, completeItems, onHoldItems } = req.body;
+        const { projectName, backlogItems, progressItems, completeItems, onHoldItems } = req.body;
+        
+        // Validate project name
+        if (typeof projectName !== 'string' || !projectName.trim()) {
+            return res.status(400).json({ error: 'Invalid project name' });
+        }
         
         // Validate the structure of incoming items
         const validateItems = (items) => {
@@ -71,7 +77,7 @@ app.post('/api/kanban', async (req, res) => {
             return res.status(400).json({ error: 'Invalid data structure' });
         }
 
-        const data = { backlogItems, progressItems, completeItems, onHoldItems };
+        const data = { projectName, backlogItems, progressItems, completeItems, onHoldItems };
         await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2));
         res.json({ success: true });
     } catch (error) {
