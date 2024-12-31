@@ -26,7 +26,7 @@ async function ensureBoardsDir() {
     }
 }
 
-// Initialize data file if it doesn't exist
+// Initialize data file with empty arrays if it doesn't exist
 async function initDataFile() {
     try {
         await fs.access(DATA_FILE);
@@ -46,19 +46,37 @@ app.get('/api/kanban', async (req, res) => {
     try {
         const data = await fs.readFile(DATA_FILE, 'utf8');
         res.json(JSON.parse(data));
-    } catch (err) {
-        res.status(500).json({ error: 'Error reading kanban data' });
+    } catch (error) {
+        console.error('Error reading kanban data:', error);
+        res.status(500).json({ error: 'Failed to read kanban data' });
     }
 });
 
 // Update kanban data
 app.post('/api/kanban', async (req, res) => {
     try {
-        const data = req.body;
+        const { backlogItems, progressItems, completeItems, onHoldItems } = req.body;
+        
+        // Validate the structure of incoming items
+        const validateItems = (items) => {
+            return Array.isArray(items) && items.every(item => 
+                item && typeof item === 'object' && 
+                typeof item.title === 'string' && 
+                typeof item.content === 'string'
+            );
+        };
+
+        if (!validateItems(backlogItems) || !validateItems(progressItems) ||
+            !validateItems(completeItems) || !validateItems(onHoldItems)) {
+            return res.status(400).json({ error: 'Invalid data structure' });
+        }
+
+        const data = { backlogItems, progressItems, completeItems, onHoldItems };
         await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2));
         res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: 'Error saving kanban data' });
+    } catch (error) {
+        console.error('Error saving kanban data:', error);
+        res.status(500).json({ error: 'Failed to save kanban data' });
     }
 });
 

@@ -42,12 +42,20 @@ async function getSavedColumns() {
             );
             if (intro === "y" || intro === "Y") {
                 backlogListArray = [
-                    "Write the documentation",
-                    "Post a technical article",
+                    { title: "Write the documentation", content: "" },
+                    { title: "Post a technical article", content: "" },
                 ];
-                progressListArray = ["Work on Droppi project", "Listen to Spotify"];
-                completeListArray = ["Submit a PR", "Review my projects code"];
-                onHoldListArray = ["Get a girlfriend"];
+                progressListArray = [
+                    { title: "Work on Droppi project", content: "" },
+                    { title: "Listen to Spotify", content: "" },
+                ];
+                completeListArray = [
+                    { title: "Submit a PR", content: "" },
+                    { title: "Review my projects code", content: "" },
+                ];
+                onHoldListArray = [
+                    { title: "Get a girlfriend", content: "" },
+                ];
             } else {
                 backlogListArray = [];
                 progressListArray = [];
@@ -101,20 +109,42 @@ function filterArray(array) {
 
 // Create DOM Elements for each list item
 function createItemEl(columnEl, column, item, index) {
-    // console.log("columnEl:", columnEl);
-    // console.log("column:", column);
-    // console.log("item:", item);
-    // console.log("index:", index);
-    // List Item
     const listEl = document.createElement("li");
-    listEl.textContent = item;
     listEl.id = index;
     listEl.classList.add("drag-item");
     listEl.draggable = true;
-    listEl.setAttribute("onfocusout", `updateItem(${index}, ${column})`);
     listEl.setAttribute("ondragstart", "drag(event)");
-    listEl.contentEditable = true;
-    // Append
+    
+    // Create header
+    const header = document.createElement("div");
+    header.classList.add("drag-item-header");
+    
+    // Add drag icon
+    const dragIcon = document.createElement("span");
+    dragIcon.classList.add("drag-icon");
+    dragIcon.innerHTML = "⋮⋮"; // Simple drag handle icon using text
+    header.appendChild(dragIcon);
+    
+    // Add title
+    const title = document.createElement("div");
+    title.classList.add("drag-item-title");
+    title.contentEditable = true;
+    title.textContent = item.title || '';
+    title.setAttribute("onfocusout", `updateItem(${index}, ${column})`);
+    header.appendChild(title);
+    
+    // Add content container
+    const content = document.createElement("div");
+    content.classList.add("drag-item-content");
+    content.contentEditable = true;
+    content.textContent = item.content || '';
+    content.setAttribute("onfocusout", `updateItem(${index}, ${column})`);
+    
+    // Assemble the card
+    listEl.appendChild(header);
+    listEl.appendChild(content);
+    
+    // Append to column
     columnEl.appendChild(listEl);
 }
 
@@ -123,10 +153,17 @@ async function updateItem(id, column) {
     const selectedArray = listArrays[column];
     const selectedColumn = listColumns[column].children;
     if (!dragging) {
-        if (!selectedColumn[id].textContent) {
+        const item = selectedColumn[id];
+        const title = item.querySelector('.drag-item-title');
+        const content = item.querySelector('.drag-item-content');
+        
+        if (!title.textContent && !content.textContent) {
             delete selectedArray[id];
         } else {
-            selectedArray[id] = selectedColumn[id].textContent;
+            selectedArray[id] = {
+                title: title.textContent || '',
+                content: content.textContent || ''
+            };
         }
         await updateSavedColumns();
         updateDOM();
@@ -135,10 +172,23 @@ async function updateItem(id, column) {
 
 // Add to Column List, Reset Textbox
 async function addToColumn(column) {
-    const itemText = addItems[column].textContent;
+    const container = addItemContainers[column];
+    const title = container.querySelector('.add-item-title');
+    const content = container.querySelector('.add-item-content');
+    
+    // Only add if title is not empty
+    if (!title.textContent.trim()) return;
+    
     const selectedArray = listArrays[column];
-    selectedArray.push(itemText);
-    addItems[column].textContent = "";
+    selectedArray.push({
+        title: title.textContent.trim(),
+        content: content.textContent.trim()
+    });
+    
+    // Reset input fields
+    title.textContent = '';
+    content.textContent = '';
+    
     await updateSavedColumns();
     updateDOM();
 }
@@ -184,19 +234,43 @@ async function updateDOM() {
 async function rebuildArrays() {
     backlogListArray = [];
     for (let i = 0; i < backlogListEl.children.length; i++) {
-        backlogListArray.push(backlogListEl.children[i].textContent);
+        const item = backlogListEl.children[i];
+        const title = item.querySelector('.drag-item-title');
+        const content = item.querySelector('.drag-item-content');
+        backlogListArray.push({
+            title: title.textContent || '',
+            content: content.textContent || ''
+        });
     }
     progressListArray = [];
     for (let i = 0; i < progressListEl.children.length; i++) {
-        progressListArray.push(progressListEl.children[i].textContent);
+        const item = progressListEl.children[i];
+        const title = item.querySelector('.drag-item-title');
+        const content = item.querySelector('.drag-item-content');
+        progressListArray.push({
+            title: title.textContent || '',
+            content: content.textContent || ''
+        });
     }
     completeListArray = [];
     for (let i = 0; i < completeListEl.children.length; i++) {
-        completeListArray.push(completeListEl.children[i].textContent);
+        const item = completeListEl.children[i];
+        const title = item.querySelector('.drag-item-title');
+        const content = item.querySelector('.drag-item-content');
+        completeListArray.push({
+            title: title.textContent || '',
+            content: content.textContent || ''
+        });
     }
     onHoldListArray = [];
     for (let i = 0; i < onHoldListEl.children.length; i++) {
-        onHoldListArray.push(onHoldListEl.children[i].textContent);
+        const item = onHoldListEl.children[i];
+        const title = item.querySelector('.drag-item-title');
+        const content = item.querySelector('.drag-item-content');
+        onHoldListArray.push({
+            title: title.textContent || '',
+            content: content.textContent || ''
+        });
     }
     await updateSavedColumns();
     updateDOM();
@@ -239,6 +313,10 @@ function showInputBox(column) {
     addBtns[column].style.visibility = "hidden";
     saveItemBtns[column].style.display = "flex";
     addItemContainers[column].style.display = "flex";
+    
+    // Focus on title field
+    const titleField = addItemContainers[column].querySelector('.add-item-title');
+    titleField.focus();
 }
 
 // Hide Item Input Box

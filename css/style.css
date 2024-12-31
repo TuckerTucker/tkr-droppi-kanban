@@ -144,13 +144,70 @@ ul {
 
 .drag-item {
 	margin: 10px;
-	padding: 10px;
+	padding: 0;
 	height: fit-content;
 	background-color: rgba(0, 0, 0, 0.3);
 	border-radius: 0.5em;
-	line-height: 1.5rem;
-	letter-spacing: 1px;
 	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.drag-item:hover {
+	background-color: rgba(0, 0, 0, 0.4);
+}
+
+.drag-item-header {
+	display: flex;
+	align-items: center;
+	gap: 0.75em;
+	padding: 0.75em;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	user-select: none;
+}
+
+.drag-icon {
+	color: rgba(255, 255, 255, 0.5);
+	font-size: 1.2em;
+	line-height: 1;
+	cursor: move;
+	user-select: none;
+}
+
+.drag-item:hover .drag-icon {
+	color: rgba(255, 255, 255, 0.8);
+}
+
+.drag-item-title {
+	flex: 1;
+	margin: 0;
+	font-size: 1em;
+	line-height: 1.5;
+	letter-spacing: 1px;
+	outline: none;
+}
+
+.drag-item-title:focus {
+	background: rgba(0, 0, 0, 0.2);
+	border-radius: 0.25em;
+	padding: 0 0.25em;
+}
+
+.drag-item-content {
+	padding: 0.75em;
+	min-height: 1em;
+	outline: none;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.drag-item-content:focus {
+	background: rgba(0, 0, 0, 0.2);
+	border-radius: 0.25em;
+}
+
+.drag-item-content:empty::before {
+	content: 'Add description...';
+	color: rgba(255, 255, 255, 0.3);
 }
 
 .drag-item:focus {
@@ -209,22 +266,40 @@ ul {
 	background-color: rgba(255, 255, 255, 0.1);
 	min-height: 100px;
 	display: none;
+	flex-direction: column;
+	gap: 0.5em;
 }
 
-.add-item {
+.add-item-title, .add-item-content {
 	width: 100%;
-	min-height: 100px;
+	min-height: 1.5em;
 	height: auto;
-	background-color: white;
-	border-radius: 0.5em;
-	margin: 5px auto;
+	background-color: transparent;
+	border-radius: 0.25em;
+	margin: 5px 0;
+	padding: 0.5em;
 	resize: none;
-	color: black;
-	padding: 10px;
+	color: white;
+	outline: none;
 }
 
-.add-item:focus {
-	outline: none;
+.add-item-title {
+	font-weight: bold;
+}
+
+.add-item-content {
+	min-height: 3em;
+}
+
+.add-item-title:empty::before,
+.add-item-content:empty::before {
+	content: attr(data-placeholder);
+	color: rgba(255, 255, 255, 0.3);
+}
+
+.add-item-title:focus,
+.add-item-content:focus {
+	background-color: rgba(0, 0, 0, 0.2);
 }
 
 /* Media Query: Laptop */
