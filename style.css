@@ -8,18 +8,16 @@ html {
 	--to-do: #a2622d;
 	--doing: #1b6161;
 	--done: #248224;
-	--on-hold: #a22d22;
+	--on-hold: #424242;
 }
 
 body {
-	margin: 0;
-	background: url("./image.jpg");
-	background-size: cover;
-	background-position: 50% 60%;
-	background-attachment: fixed;
-	color: white;
+	padding: 1em;
+	margin: 0em;
+	background: #696969;
+	color: #f0f0f0;
 	font-family: "Neucha", cursive;
-	font-size: 20px;
+	font-size: 1em;
 	overflow-y: hidden;
 }
 
@@ -40,7 +38,7 @@ ul {
 }
 
 .drag-container {
-	margin: 20px;
+	margin: 1em;
 }
 
 .drag-list {
@@ -51,10 +49,10 @@ ul {
 /* Columns */
 .drag-column {
 	flex: 1;
-	margin: 0 10px;
+	margin: 0 0.5em;
 	position: relative;
-	background-color: rgba(0, 0, 0, 0.4);
-	border-radius: 10px;
+	background-color: #33333366;
+	border-radius: 0.5em;
 	overflow-x: hidden;
 }
 
@@ -95,18 +93,18 @@ ul {
 }
 
 .custom-scroll-todo::-webkit-scrollbar-track {
-	box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4);
-	border-radius: 10px;
+	box-shadow: inset 0 0 6px #33333366;
+	border-radius: 0.5em;
 	background-color: rgba(255, 255, 255, 0.3);
 	margin-right: 5px;
 }
 
 .custom-scroll-todo::-webkit-scrollbar {
-	width: 10px;
+	width: 0.5em;
 }
 
 .custom-scroll-todo::-webkit-scrollbar-thumb {
-	border-radius: 10px;
+	border-radius: 0.5em;
 	box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
 	background-color: var(--to-do);
 }
@@ -119,7 +117,7 @@ ul {
 
 .custom-scroll-doing::-webkit-scrollbar-track {
 	box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4);
-	border-radius: 10px;
+	border-radius: 0.5em;
 	background-color: rgba(255, 255, 255, 0.3);
 	margin-right: 5px;
 }
@@ -129,7 +127,7 @@ ul {
 }
 
 .custom-scroll-doing::-webkit-scrollbar-thumb {
-	border-radius: 10px;
+	border-radius: 0.5em;
 	box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
 	background-color: var(--doing);
 }
@@ -142,17 +140,17 @@ ul {
 
 .custom-scroll-done::-webkit-scrollbar-track {
 	box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4);
-	border-radius: 10px;
+	border-radius: 0.5em;
 	background-color: rgba(255, 255, 255, 0.3);
 	margin-right: 5px;
 }
 
 .custom-scroll-done::-webkit-scrollbar {
-	width: 10px;
+	width: 0.5em;
 }
 
 .custom-scroll-done::-webkit-scrollbar-thumb {
-	border-radius: 10px;
+	border-radius: 0.5em;
 	box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
 	background-color: var(--done);
 }
@@ -165,7 +163,7 @@ ul {
 
 .custom-scroll::-webkit-scrollbar-track {
 	box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4);
-	border-radius: 10px;
+	border-radius: 0.5em;
 	background-color: rgba(255, 255, 255, 0.3);
 	margin-right: 5px;
 }
@@ -175,7 +173,7 @@ ul {
 }
 
 .custom-scroll::-webkit-scrollbar-thumb {
-	border-radius: 10px;
+	border-radius: 0.5em;
 	box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
 	background-color: var(--on-hold);
 }
@@ -183,7 +181,7 @@ ul {
 .header {
 	display: flex;
 	justify-content: center;
-	border-radius: 10px;
+	border-radius: 0.5em;
 	margin: 10px;
 }
 
@@ -204,8 +202,8 @@ ul {
 	margin: 10px;
 	padding: 10px;
 	height: fit-content;
-	background-color: rgba(0, 0, 0, 0.8);
-	border-radius: 10px;
+	background-color: #333333cc;
+	border-radius: 0.5em;
 	line-height: 1.5rem;
 	letter-spacing: 1px;
 	cursor: pointer;
@@ -264,7 +262,7 @@ ul {
 .add-container {
 	margin: 10px;
 	padding: 5px 10px;
-	border-radius: 10px;
+	border-radius: 0.5em;
 	background-color: rgba(255, 255, 255, 0.9);
 	min-height: 100px;
 	display: none;
@@ -275,7 +273,7 @@ ul {
 	min-height: 100px;
 	height: auto;
 	background-color: white;
-	border-radius: 10px;
+	border-radius: 0.5em;
 	margin: 5px auto;
 	resize: none;
 	color: black;
