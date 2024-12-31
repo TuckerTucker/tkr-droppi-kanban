@@ -1,19 +1,13 @@
 {
-  "projectName": "This is the project name",
+  "projectName": "My Kanban Board",
   "backlogItems": [
     {
-      "title": "Card Title",
-      "content": "Card description",
-      "collapsed": true
+      "title": "Example Card",
+      "content": "This is description",
+      "collapsed": false
     }
   ],
   "progressItems": [],
-  "completeItems": [
-    {
-      "title": "asdf",
-      "content": "# asdf\n\n\n**bold**\n_slanty_\n\n>this thing\n\n```\ncode yo.\n```",
-      "collapsed": true
-    }
-  ],
+  "completeItems": [],
   "onHoldItems": []
 }
